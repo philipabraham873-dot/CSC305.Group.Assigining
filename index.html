@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CSC305 GROUP ASSIGNING - Student</title>
+    <title>Department Group Portal - Student</title>
     <style>
         body { font-family: Arial; background:#f4f6f9; padding:20px; color:#333; }
         h1,h2 { text-align:center; }
@@ -15,16 +15,38 @@
         th { background:#2c5364; color:white; }
         .admin-link { text-align:center; margin-top:15px; }
         .admin-link a { text-decoration:none; color:#2c5364; font-weight:bold; }
+
+        /* WhatsApp button styling */
+        .whatsapp-section { 
+            margin-top:20px; 
+            text-align:center; 
+            display:none; 
+        }
+        .whatsapp-btn {
+            display:inline-block;
+            padding:10px 14px;
+            background:#25D366;
+            color:white;
+            border-radius:6px;
+            text-decoration:none;
+            font-weight:bold;
+        }
+        .whatsapp-btn:hover{
+            background:#1ebe5d;
+        }
     </style>
 </head>
 <body>
 
-<h1>CSC305 GROUP ASSIGNING</h1>
+<h1>Department Group Portal</h1>
+
 <div class="container">
     <h2>Student Registration</h2>
+
     <input type="text" id="studentName" placeholder="Enter Your Name">
     <input type="text" id="studentMatric" placeholder="Enter Your Matric Number">
     <button id="checkGroupBtn">Check My Group</button>
+
     <div class="message" id="studentMessage"></div>
 
     <table id="groupTable">
@@ -39,6 +61,14 @@
         <tbody></tbody>
     </table>
 
+    <!-- WhatsApp Section -->
+    <div class="whatsapp-section" id="whatsappSection">
+        <h3>Join Your Group WhatsApp</h3>
+        <a id="whatsappLink" class="whatsapp-btn" target="_blank">
+            Join WhatsApp Group
+        </a>
+    </div>
+
     <div class="admin-link">
         <a href="view.html">Admin Login</a>
     </div>
@@ -46,11 +76,14 @@
 
 <!-- Firebase Modular SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  // 🔹 Your Firebase config
-  const firebaseConfig = {
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } 
+from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+/* ================= FIREBASE CONFIG ================= */
+
+const firebaseConfig = {
     apiKey: "AIzaSyC91cfSskb7_MoQ8oK8MLrcJZC7n-XiMMk",
     authDomain: "csc305-e8065.firebaseapp.com",
     projectId: "csc305-e8065",
@@ -58,77 +91,143 @@
     messagingSenderId: "152214030297",
     appId: "1:152214030297:web:18a8007d0b6f54f565fbc8",
     measurementId: "G-THY6ZSMCD3"
-  };
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  // 🔹 Assign group by last digit of matric
-  function getGroup(matric){
-      let lastDigit = parseInt(matric.charAt(matric.length-1));
-      if(lastDigit===0||lastDigit===1) return 1;
-      if(lastDigit===2||lastDigit===3) return 2;
-      if(lastDigit===4||lastDigit===5) return 3;
-      if(lastDigit===6||lastDigit===7) return 4;
-      return 5;
-  }
+/* ================= GROUP LOGIC ================= */
 
-  // 🔹 Student registration function
-  async function studentRegister(){
-      const nameInput = document.getElementById("studentName");
-      const matricInput = document.getElementById("studentMatric");
-      const msg = document.getElementById("studentMessage");
+function getGroup(matric){
+    let lastDigit = parseInt(matric.charAt(matric.length - 1));
 
-      const name = nameInput.value.trim().toUpperCase();
-      const matric = matricInput.value.trim().toUpperCase();
+    if(lastDigit===0 || lastDigit===1) return 1;
+    if(lastDigit===2 || lastDigit===3) return 2;
+    if(lastDigit===4 || lastDigit===5) return 3;
+    if(lastDigit===6 || lastDigit===7) return 4;
+    return 5;
+}
 
-      if(!name || !matric){
-          msg.style.color="red"; msg.innerText="Please fill all fields!"; return;
-      }
+/* ================= WHATSAPP LINKS ================= */
 
-      if(isNaN(matric.charAt(matric.length-1))){
-          msg.style.color="red"; msg.innerText="Matric must end with a digit!"; return;
-      }
+function getWhatsAppLink(group){
+    const links = {
+        1: "https://chat.whatsapp.com/Bt2PCSFOJWE4tqmLBxnxcG?mode=gi_t",
+        2: "https://chat.whatsapp.com/D9Y3Pv89haP7lmxEFvEVo9?mode=gi_t",
+        3: "https://chat.whatsapp.com/BwuIuQqviInH054PX7UDSx?mode=gi_t",
+        4: "https://chat.whatsapp.com/LblXfakYNm6FmjrsZ0BdFR?mode=gi_t",
+        5: "https://chat.whatsapp.com/HaX9Mc1KKBkAzUH6kjuq2a?mode=gi_t"
+    };
 
-      const studentRef = doc(db, "students", matric);
-      const studentSnap = await getDoc(studentRef);
-      if(studentSnap.exists()){
-          msg.style.color="red"; msg.innerText="This matric number is already registered!"; return;
-      }
+    return links[group];
+}
 
-      const group = getGroup(matric);
-      await setDoc(studentRef, { name, matric, group });
-      msg.style.color="green"; msg.innerText=`You belong to GROUP ${group}`;
+/* ================= STUDENT REGISTRATION ================= */
 
-      // Clear inputs
-      nameInput.value=""; matricInput.value="";
+async function studentRegister(){
 
-      // Show group members including this student
-      showGroupMembers(group);
-  }
+    const nameInput = document.getElementById("studentName");
+    const matricInput = document.getElementById("studentMatric");
+    const msg = document.getElementById("studentMessage");
+    const tbody = document.querySelector("#groupTable tbody");
+    const whatsappSection = document.getElementById("whatsappSection");
+    const whatsappLink = document.getElementById("whatsappLink");
 
-  // 🔹 Show all students in the same group
-  async function showGroupMembers(group){
-      const tbody = document.querySelector("#groupTable tbody");
-      tbody.innerHTML = "";
+    const name = nameInput.value.trim().toUpperCase();
+    const matric = matricInput.value.trim().toUpperCase();
 
-      const q = query(collection(db, "students"), where("group","==",group));
-      const snapshot = await getDocs(q);
+    msg.innerText = "";
+    tbody.innerHTML = "";
+    whatsappSection.style.display = "none";
 
-      let i = 1;
-      snapshot.forEach(doc => {
-          const s = doc.data();
-          tbody.innerHTML += `<tr>
-              <td>${i++}</td>
-              <td>${s.name}</td>
-              <td>${s.matric}</td>
-              <td>${s.group}</td>
-          </tr>`;
-      });
-  }
+    if(!name || !matric){
+        msg.style.color="red";
+        msg.innerText="Please fill all fields!";
+        return;
+    }
 
-  // 🔹 Fix button click in module scripts
-  document.getElementById("checkGroupBtn").addEventListener("click", studentRegister);
+    if(isNaN(matric.charAt(matric.length-1))){
+        msg.style.color="red";
+        msg.innerText="Matric must end with a digit!";
+        return;
+    }
+
+    const studentRef = doc(db, "students", matric);
+    const studentSnap = await getDoc(studentRef);
+
+    // 🔴 IF STUDENT EXISTS
+    if(studentSnap.exists()){
+
+        const existingData = studentSnap.data();
+
+        if(existingData.name !== name){
+            msg.style.color="red";
+            msg.innerText="Matric number already registered with a different name!";
+            return;
+        }
+
+        msg.style.color="orange";
+        msg.innerText=`Already registered. You belong to GROUP ${existingData.group}`;
+
+        await showGroupMembers(existingData.group);
+        return;
+    }
+
+    // 🟢 NEW STUDENT
+    const group = getGroup(matric);
+
+    await setDoc(studentRef, {
+        name: name,
+        matric: matric,
+        group: group
+    });
+
+    msg.style.color="green";
+    msg.innerText=`Registration successful! You belong to GROUP ${group}`;
+
+    nameInput.value="";
+    matricInput.value="";
+
+    await showGroupMembers(group);
+}
+
+/* ================= SHOW GROUP MEMBERS ================= */
+
+async function showGroupMembers(group){
+
+    const tbody = document.querySelector("#groupTable tbody");
+    const whatsappSection = document.getElementById("whatsappSection");
+    const whatsappLink = document.getElementById("whatsappLink");
+
+    tbody.innerHTML = "";
+
+    const q = query(collection(db, "students"), where("group","==",group));
+    const snapshot = await getDocs(q);
+
+    let i = 1;
+
+    snapshot.forEach(docSnap => {
+        const s = docSnap.data();
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${i++}</td>
+                <td>${s.name}</td>
+                <td>${s.matric}</td>
+                <td>${s.group}</td>
+            </tr>
+        `;
+    });
+
+    // Show WhatsApp Link
+    whatsappLink.href = getWhatsAppLink(group);
+    whatsappSection.style.display = "block";
+}
+
+/* ================= BUTTON EVENT ================= */
+
+document.getElementById("checkGroupBtn")
+        .addEventListener("click", studentRegister);
 
 </script>
 
