@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Department Group Portal - Student</title>
+    <style>
+        body { font-family: Arial; background:#f4f6f9; padding:20px; color:#333; }
+        h1,h2 { text-align:center; }
+        .container { max-width:500px; margin:20px auto; background:white; padding:20px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.2); }
+        input, button { width:100%; padding:12px; margin:10px 0; border-radius:6px; font-size:14px; }
+        button { cursor:pointer; border:none; color:white; background:#2c5364; }
+        button:hover { background:#203a43; }
+        .message { text-align:center; font-weight:bold; margin-top:10px; }
+        table { width:100%; border-collapse:collapse; margin-top:20px; }
+        th, td { border:1px solid #ccc; padding:8px; text-align:center; text-transform: uppercase; }
+        th { background:#2c5364; color:white; }
+        .admin-link { text-align:center; margin-top:15px; }
+        .admin-link a { text-decoration:none; color:#2c5364; font-weight:bold; }
+    </style>
+</head>
+<body>
+
+<h1>Department Group Portal</h1>
+<div class="container">
+    <h2>Student Registration</h2>
+    <input type="text" id="studentName" placeholder="Enter Your Name">
+    <input type="text" id="studentMatric" placeholder="Enter Your Matric Number">
+    <button id="checkGroupBtn">Check My Group</button>
+    <div class="message" id="studentMessage"></div>
+
+    <table id="groupTable">
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Name</th>
+                <th>Matric</th>
+                <th>Group</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="admin-link">
+        <a href="view.html">Admin Login</a>
+    </div>
+</div>
+
+<!-- Firebase Modular SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // 🔹 Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyC91cfSskb7_MoQ8oK8MLrcJZC7n-XiMMk",
+    authDomain: "csc305-e8065.firebaseapp.com",
+    projectId: "csc305-e8065",
+    storageBucket: "csc305-e8065.firebasestorage.app",
+    messagingSenderId: "152214030297",
+    appId: "1:152214030297:web:18a8007d0b6f54f565fbc8",
+    measurementId: "G-THY6ZSMCD3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // 🔹 Assign group by last digit of matric
+  function getGroup(matric){
+      let lastDigit = parseInt(matric.charAt(matric.length-1));
+      if(lastDigit===0||lastDigit===1) return 1;
+      if(lastDigit===2||lastDigit===3) return 2;
+      if(lastDigit===4||lastDigit===5) return 3;
+      if(lastDigit===6||lastDigit===7) return 4;
+      return 5;
+  }
+
+  // 🔹 Student registration function
+  async function studentRegister(){
+      const nameInput = document.getElementById("studentName");
+      const matricInput = document.getElementById("studentMatric");
+      const msg = document.getElementById("studentMessage");
+
+      const name = nameInput.value.trim().toUpperCase();
+      const matric = matricInput.value.trim().toUpperCase();
+
+      if(!name || !matric){
+          msg.style.color="red"; msg.innerText="Please fill all fields!"; return;
+      }
+
+      if(isNaN(matric.charAt(matric.length-1))){
+          msg.style.color="red"; msg.innerText="Matric must end with a digit!"; return;
+      }
+
+      const studentRef = doc(db, "students", matric);
+      const studentSnap = await getDoc(studentRef);
+      if(studentSnap.exists()){
+          msg.style.color="red"; msg.innerText="This matric number is already registered!"; return;
+      }
+
+      const group = getGroup(matric);
+      await setDoc(studentRef, { name, matric, group });
+      msg.style.color="green"; msg.innerText=`You belong to GROUP ${group}`;
+
+      // Clear inputs
+      nameInput.value=""; matricInput.value="";
+
+      // Show group members including this student
+      showGroupMembers(group);
+  }
+
+  // 🔹 Show all students in the same group
+  async function showGroupMembers(group){
+      const tbody = document.querySelector("#groupTable tbody");
+      tbody.innerHTML = "";
+
+      const q = query(collection(db, "students"), where("group","==",group));
+      const snapshot = await getDocs(q);
+
+      let i = 1;
+      snapshot.forEach(doc => {
+          const s = doc.data();
+          tbody.innerHTML += `<tr>
+              <td>${i++}</td>
+              <td>${s.name}</td>
+              <td>${s.matric}</td>
+              <td>${s.group}</td>
+          </tr>`;
+      });
+  }
+
+  // 🔹 Fix button click in module scripts
+  document.getElementById("checkGroupBtn").addEventListener("click", studentRegister);
+
+</script>
+
+</body>
+</html>
